@@ -4,6 +4,8 @@ var app = module.exports = express.createServer();
 
 var io = require('socket.io')(app);
 
+DEFAULT_PORT = process.env.PORT || 80;
+
 io.on('connection', function(socket){
 	console.log(socket.id + " joined")
 	socket.on('confirm', () => {
@@ -25,6 +27,6 @@ io.on('connection', function(socket){
 	})
 });
 
-app.listen(3000, function(){
+app.listen(DEFAULT_PORT, function(){
 	console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 });
