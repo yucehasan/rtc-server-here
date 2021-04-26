@@ -9,24 +9,32 @@ DEFAULT_PORT = process.env.PORT || 80;
 var rooms = {};
 io.sockets.on("connection", function (socket) {
   console.log(socket.id + " joined");
+  var id = socket.id
+  console.log("type: ", typeof id);
   socket.on("confirm", (data) => {
     if (rooms[data.roomID]) {
-      console.log("room exists");
-      rooms[data.roomID]["participants"].push(socket.id);
+      rooms[data.roomID]["participants"].push({"socketID": id, "socket": socket});
     } else {
-      console.log("creating room");
       rooms[data.roomID] = {
-        participants: [socket.id],
+        participants: [{"socketID": id, "socket": socket}],
       };
     }
-    console.log(rooms);
-    console.log("joined from", data.roomID);
-    io.sockets.emit(
-      "user-joined",
-      socket.id,
-      io.engine.clientsCount,
-      Object.keys(io.sockets.clients().sockets)
-    );
+	var allInRoom = [];
+	for(var i = 0; i < rooms[data.roomID].participants.length; i++){
+		allInRoom.push(rooms[data.roomID].participants[i]["socketID"])
+	}
+	for(var i = 0; i < rooms[data.roomID].participants.length; i++){
+		console.log("Sending to people in", data.roomID, "participant", i);
+		console.log(rooms[data.roomID].participants[i]["socketID"].localeCompare(id), "cokparison")
+		console.log(io.engine.clientsCount)
+		console.log(Object.keys(io.sockets.clients().sockets))
+		rooms[data.roomID].participants[i].socket.emit("user-joined", id, rooms[data.roomID].participants.length, allInRoom) // "user-joined", id, rooms[data.roomID].participants.length, allInRoom 
+		//io.sockets.emit( "user-joined", id, io.engine.clientsCount, Object.keys(io.sockets.clients().sockets));
+	}
+  });
+
+  socket.on("print", () => {
+    console.log(rooms)
   });
 
   socket.on("signal", (toId, message) => {
