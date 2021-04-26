@@ -12,8 +12,10 @@ io.sockets.on("connection", function (socket) {
   var id = socket.id
   console.log("type: ", typeof id);
   socket.on("confirm", (data) => {
+	var username = data.username;
+	console.log(username, "joined")
     if (rooms[data.roomID]) {
-      rooms[data.roomID]["participants"].push({"socketID": id, "socket": socket});
+      rooms[data.roomID]["participants"].push({"socketID": id, "username": username, "socket": socket});
     } else {
       rooms[data.roomID] = {
         participants: [{"socketID": id, "socket": socket}],
@@ -21,13 +23,10 @@ io.sockets.on("connection", function (socket) {
     }
 	var allInRoom = [];
 	for(var i = 0; i < rooms[data.roomID].participants.length; i++){
-		allInRoom.push(rooms[data.roomID].participants[i]["socketID"])
+		allInRoom.push({"socketID": rooms[data.roomID].participants[i]["socketID"], "username": rooms[data.roomID].participants[i]["username"]});
 	}
 	for(var i = 0; i < rooms[data.roomID].participants.length; i++){
 		console.log("Sending to people in", data.roomID, "participant", i);
-		console.log(rooms[data.roomID].participants[i]["socketID"].localeCompare(id), "cokparison")
-		console.log(io.engine.clientsCount)
-		console.log(Object.keys(io.sockets.clients().sockets))
 		rooms[data.roomID].participants[i].socket.emit("user-joined", id, rooms[data.roomID].participants.length, allInRoom) // "user-joined", id, rooms[data.roomID].participants.length, allInRoom 
 		//io.sockets.emit( "user-joined", id, io.engine.clientsCount, Object.keys(io.sockets.clients().sockets));
 	}
