@@ -16,13 +16,13 @@ io.sockets.on("connection", function (socket) {
     console.log(username, "joined");
     if (rooms[data.roomID]) {
       if (data.userType === "student") {
-        rooms[data.roomID]["students"].push({
+        rooms[data.roomID].students.push({
           socketID: id,
           username: username,
           socket: socket,
         });
       } else if (data.userType === "instructor") {
-        rooms[data.roomID]["instructors"].push({
+        rooms[data.roomID].instructors.push({
           socketID: id,
           username: username,
           socket: socket,
@@ -59,7 +59,7 @@ io.sockets.on("connection", function (socket) {
       });
     }
     for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
-      console.log("Sending to people in", data.roomID, "participant", i);
+      console.log("Sending to instructor in", data.roomID, "participant", i);
       rooms[data.roomID].instructors[i].socket.emit(
         "user-joined",
         id,
@@ -68,7 +68,7 @@ io.sockets.on("connection", function (socket) {
       );
     }
 	for (var i = 0; i < rooms[data.roomID].students.length; i++) {
-		console.log("Sending to people in", data.roomID, "participant", i);
+		console.log("Sending to student in", data.roomID, "participant", i);
 		rooms[data.roomID].students[i].socket.emit(
 		  "user-joined",
 		  id,
