@@ -91,6 +91,17 @@ io.sockets.on("connection", function (socket) {
 	}
   });
 
+  socket.on("screen-share", (data) => {
+	for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+		if(socket.id != rooms[data.roomID].instructors[i].socketID)
+			rooms[data.roomID].instructors[i].socket.emit("expect-screen", {username: data.username})
+	}
+	for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+		if(socket.id != rooms[data.roomID].students[i].socketID)
+			rooms[data.roomID].students[i].socket.emit("expect-screen", {username: data.username})
+	}
+  });
+
   socket.on("print", () => {
     console.log(rooms);
   });
@@ -112,25 +123,25 @@ io.sockets.on("connection", function (socket) {
     var index;
     if (data.userType === "instructor") {
       for (var i = 0; i < rooms[data.roomID].instructors.length; i += 1) {
-        if (rooms[data.roomID].participants[i].socketID === socket.id) {
+        if (rooms[data.roomID].instructors[i].socketID === socket.id) {
           index = i;
         }
       }
       if (index > -1) {
         console.log("removed", socket.id);
-        rooms[data.roomID].participants.splice(index, 1);
+        rooms[data.roomID].instructors.splice(index, 1);
       } else {
         console.error("Unable to remove participant");
       }
     } else if (data.userType === "student") {
       for (var i = 0; i < rooms[data.roomID].students.length; i += 1) {
-        if (rooms[data.roomID].participants[i].socketID === socket.id) {
+        if (rooms[data.roomID].students[i].socketID === socket.id) {
           index = i;
         }
       }
       if (index > -1) {
         console.log("removed", socket.id);
-        rooms[data.roomID].participants.splice(index, 1);
+        rooms[data.roomID].students.splice(index, 1);
       } else {
         console.error("Unable to remove participant");
       }
