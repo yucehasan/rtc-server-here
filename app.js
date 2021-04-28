@@ -6,6 +6,7 @@ var io = require("socket.io")(app);
 
 DEFAULT_PORT = process.env.PORT || 80;
 
+
 var rooms = {};
 io.sockets.on("connection", function (socket) {
   console.log(socket.id + " joined");
@@ -50,12 +51,18 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("disconnectFrom", function (data) {
-    console.log("leaving from", data.roomID);
-    // rooms[data.roomID]
-    const index = rooms[data.roomID].participants.indexOf(socket.id);
+    var index;
+	for(var i = 0; i < rooms[data.roomID].participants.length; i += 1) {
+        if(rooms[data.roomID].participants[i].socketID === socket.id) {
+            index = i;
+        }
+    }
     if (index > -1) {
 		rooms[data.roomID].participants.splice(index, 1);
     }
+	else{
+		console.error("Unable to remove participant")
+	}
   });
 
   socket.on("slideChange", function (number) {
