@@ -7,12 +7,15 @@ var io = require("socket.io")(app);
 DEFAULT_PORT = process.env.PORT || 80;
 
 var rooms = {};
+var pairs = {};
+
 io.sockets.on("connection", function (socket) {
   console.log(socket.id + " joined");
   var id = socket.id;
   console.log("type: ", typeof id);
   socket.on("confirm", (data) => {
     var username = data.username;
+    pairs[id] = data.roomID;
     console.log(username, "joined");
     if (rooms[data.roomID]) {
       if (data.userType === "student") {
@@ -63,44 +66,72 @@ io.sockets.on("connection", function (socket) {
       rooms[data.roomID].instructors[i].socket.emit(
         "user-joined",
         id,
-        rooms[data.roomID].instructors.length + rooms[data.roomID].students.length,
+        rooms[data.roomID].instructors.length +
+          rooms[data.roomID].students.length,
         allInRoom
       );
     }
-	for (var i = 0; i < rooms[data.roomID].students.length; i++) {
-		console.log("Sending to student in", data.roomID, "participant", i);
-		rooms[data.roomID].students[i].socket.emit(
-		  "user-joined",
-		  id,
-		  rooms[data.roomID].instructors.length + rooms[data.roomID].students.length,
-		  allInRoom
-		); // "user-joined", id, rooms[data.roomID].participants.length, allInRoom
-		//io.sockets.emit( "user-joined", id, io.engine.clientsCount, Object.keys(io.sockets.clients().sockets));
-	  }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      console.log("Sending to student in", data.roomID, "participant", i);
+      rooms[data.roomID].students[i].socket.emit(
+        "user-joined",
+        id,
+        rooms[data.roomID].instructors.length +
+          rooms[data.roomID].students.length,
+        allInRoom
+      ); // "user-joined", id, rooms[data.roomID].participants.length, allInRoom
+      //io.sockets.emit( "user-joined", id, io.engine.clientsCount, Object.keys(io.sockets.clients().sockets));
+    }
   });
 
   socket.on("analyze-result", (data) => {
-	//{roomID: this.roomID, username: this.username, result: res["task_result"]}
-	//TODO: What about multiple hands?
-	var handGesture = data.result["hand_result"][0].recognizedHandGesture
-	if(handGesture == 1 || handGesture == 5){
-		console.log(data.username, "from", data.roomID, "raised hand");
-		for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
-			rooms[data.roomID].instructors[i].socket.emit("raise-hand", {username: data.username})
-		}
-	}
+    //{roomID: this.roomID, username: this.username, result: res["task_result"]}
+    //TODO: What about multiple hands?
+    var handGesture = data.result["hand_result"][0].recognizedHandGesture;
+    if (handGesture == 1 || handGesture == 5) {
+      console.log(data.username, "from", data.roomID, "raised hand");
+      for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+        rooms[data.roomID].instructors[i].socket.emit("raise-hand", {
+          username: data.username,
+        });
+      }
+    }
   });
 
   socket.on("screen-share", (data) => {
+    for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+      if (socket.id != rooms[data.roomID].instructors[i].socketID)
+        rooms[data.roomID].instructors[i].socket.emit("expect-screen", {
+          username: data.username,
+        });
+    }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      if (socket.id != rooms[data.roomID].students[i].socketID)
+        rooms[data.roomID].students[i].socket.emit("expect-screen", {
+          username: data.username,
+        });
+    }
+  });
+
+  socket.on("close-video", (data) => {
+	  var roomID = data.roomID
+	  for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+		rooms[roomID].instructors[i].socket.emit("user-left", socket.id);
+	  }
+	  for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+		rooms[roomID].students[i].socket.emit("user-left", socket.id);
+	  }
+  })
+
+  socket.on("close-share", (data) => {
+	var roomID = data.roomID
 	for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
-		if(socket.id != rooms[data.roomID].instructors[i].socketID)
-			rooms[data.roomID].instructors[i].socket.emit("expect-screen", {username: data.username})
+	  rooms[roomID].instructors[i].socket.emit("close-share", socket.id);
 	}
 	for (var i = 0; i < rooms[data.roomID].students.length; i++) {
-		if(socket.id != rooms[data.roomID].students[i].socketID)
-			rooms[data.roomID].students[i].socket.emit("expect-screen", {username: data.username})
+	  rooms[roomID].students[i].socket.emit("close-share", socket.id);
 	}
-  });
+})
 
   socket.on("print", () => {
     console.log(rooms);
@@ -114,41 +145,38 @@ io.sockets.on("connection", function (socket) {
     io.sockets.emit("broadcast-message", socket.id, data);
   });
 
-  socket.on("disconnect", function (data) {
+  socket.on("disconnect", function () {
     console.log(socket.id + " left");
-    io.sockets.emit("user-left", socket.id);
-  });
-
-  socket.on("disconnectFrom", function (data) {
-    var index;
-    if (data.userType === "instructor") {
-      for (var i = 0; i < rooms[data.roomID].instructors.length; i += 1) {
-        if (rooms[data.roomID].instructors[i].socketID === socket.id) {
-          index = i;
-        }
-      }
-      if (index > -1) {
-        console.log("removed", socket.id);
-        rooms[data.roomID].instructors.splice(index, 1);
-      } else {
-        console.error("Unable to remove participant");
-      }
-    } else if (data.userType === "student") {
-      for (var i = 0; i < rooms[data.roomID].students.length; i += 1) {
-        if (rooms[data.roomID].students[i].socketID === socket.id) {
-          index = i;
-        }
-      }
-      if (index > -1) {
-        console.log("removed", socket.id);
-        rooms[data.roomID].students.splice(index, 1);
-      } else {
-        console.error("Unable to remove participant");
-      }
-    } else {
-      console.error("Error while removing user");
+    var roomID = pairs[socket.id];
+    for (var i = 0; i < rooms[roomID].instructors.length; i += 1) {
+      rooms[roomID].instructors[i].socket.emit("user-left", socket.id);
     }
-	console.log("remaining in room:", rooms[data.roomID]);
+    for (var i = 0; i < rooms[roomID].students.length; i += 1) {
+      rooms[roomID].students[i].socket.emit("user-left", socket.id);
+    }
+
+    var index = -1;
+    for (var i = 0; i < rooms[roomID].instructors.length; i += 1) {
+      if (rooms[roomID].instructors[i].socketID === socket.id) {
+        index = i;
+      }
+    }
+    if (index > -1) {
+      console.log("removed", socket.id);
+      rooms[roomID].instructors.splice(index, 1);
+    } else {
+      for (var i = 0; i < rooms[roomID].students.length; i += 1) {
+        if (rooms[roomID].students[i].socketID === socket.id) {
+          index = i;
+        }
+      }
+      if (index > -1) {
+        console.log("removed", socket.id);
+        rooms[roomID].students.splice(index, 1);
+      } else {
+        console.error("Unable to remove participant");
+      }
+    }
   });
 
   socket.on("slideChange", function (number) {
