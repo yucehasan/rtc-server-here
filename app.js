@@ -174,6 +174,7 @@ io.sockets.on("connection", function (socket) {
   socket.on("disconnect", function () {
     console.log(socket.id + " left");
     var roomID = pairs[socket.id];
+    delete pairs[socket.id];
     for (var i = 0; i < rooms[roomID].instructors.length; i += 1) {
       rooms[roomID].instructors[i].socket.emit("user-left", socket.id);
     }
