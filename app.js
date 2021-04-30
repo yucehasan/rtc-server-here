@@ -113,28 +113,54 @@ io.sockets.on("connection", function (socket) {
     }
   });
 
+  socket.on("slide-start", (data) => {
+    for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+      rooms[data.roomID].instructors[i].socket.emit("slide-start");
+    }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      rooms[data.roomID].students[i].socket.emit("slide-start");
+    }
+  });
+
+  socket.on("slide-stop", (data) => {
+    for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+      rooms[data.roomID].instructors[i].socket.emit("slide-stop");
+    }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      rooms[data.roomID].students[i].socket.emit("slide-stop");
+    }
+  });
+
   socket.on("close-video", (data) => {
-	  var roomID = data.roomID
-	  for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
-		rooms[roomID].instructors[i].socket.emit("user-left", socket.id);
-	  }
-	  for (var i = 0; i < rooms[data.roomID].students.length; i++) {
-		rooms[roomID].students[i].socket.emit("user-left", socket.id);
-	  }
-  })
+    var roomID = data.roomID;
+    for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+      rooms[roomID].instructors[i].socket.emit("user-left", socket.id);
+    }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      rooms[roomID].students[i].socket.emit("user-left", socket.id);
+    }
+  });
 
   socket.on("close-share", (data) => {
-	var roomID = data.roomID
-	for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
-	  rooms[roomID].instructors[i].socket.emit("close-share", socket.id);
-	}
-	for (var i = 0; i < rooms[data.roomID].students.length; i++) {
-	  rooms[roomID].students[i].socket.emit("close-share", socket.id);
-	}
-})
+    var roomID = data.roomID;
+    for (var i = 0; i < rooms[data.roomID].instructors.length; i++) {
+      rooms[roomID].instructors[i].socket.emit("close-share", socket.id);
+    }
+    for (var i = 0; i < rooms[data.roomID].students.length; i++) {
+      rooms[roomID].students[i].socket.emit("close-share", socket.id);
+    }
+  });
 
   socket.on("print", () => {
     console.log(rooms);
+  });
+
+  socket.on("new-comer-stream", (data) => {
+    console.log("sending to", data.toID);
+    io.to(data.toId).emit("expect-screen", {
+      username: data.username,
+    });
+    socket.emit("ack");
   });
 
   socket.on("signal", (toId, message) => {
