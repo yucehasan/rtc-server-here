@@ -155,6 +155,20 @@ io.sockets.on("connection", function (socket) {
     console.log(rooms);
   });
 
+  socket.on("chat-msg", (data) => {
+	  var roomID = data.roomID;
+	  var msg = data.message;
+	  var sender = data.sender
+	  for (var i = 0; i < rooms[roomID].instructors.length; i += 1) {
+		if(rooms[roomID].instructors[i].socketID != socket.id)
+			rooms[roomID].instructors[i].socket.emit("chat-msg", {sender: sender, message: msg});
+	  }
+	  for (var i = 0; i < rooms[roomID].students.length; i += 1) {
+		if(rooms[roomID].students[i].socketID != socket.id)
+			rooms[roomID].students[i].socket.emit("chat-msg", {sender: sender, message: msg});
+	  }
+  });
+
   socket.on("new-comer-stream", (data) => {
     console.log("sending to", data.toID);
     io.to(data.toId).emit("expect-screen", {
